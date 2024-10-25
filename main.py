@@ -7,73 +7,58 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import seaborn as sns
+import streamlit as st
 from processing import fetch_stock_data, preprocess_data, add_features, train_models, forecast_prices
 from visualizations import plot_results, plot_residuals, plot_forecast
 
+#python3 -m streamlit run main.py 
 def main():
-    tickers = {
-        'AAPL': 'Apple',
-        'MSFT': 'Microsoft',
-        'GOOGL': 'Google',
-        'AMZN': 'Amazon',
-        'META': 'Meta',
-        'TSLA': 'Tesla',
-        'NFLX': 'Netflix'
-    }
-    start_date = '2016-01-01'
-    end_date = '2024-09-30'
-    train_end_date = '2024-03-31'
+    st.title('Stock Price Prediction and Forecasting')
     
-    # Process the first ticker to print training and residuals
-    first_ticker = list(tickers.keys())[0]
-    print(f'Processing {first_ticker}...')
+    tickers = st.text_input('Enter stock tickers (comma-separated)', 'AAPL,MSFT,GOOGL,AMZN,META,TSLA,NFLX')
+    tickers = [ticker.strip() for ticker in tickers.split(',')]
     
-    # Fetch data
-    df = fetch_stock_data(first_ticker, start_date, end_date)
+    start_date = st.date_input('Start Date', value=pd.to_datetime('2016-01-01'))
+    end_date = st.date_input('End Date', value=pd.to_datetime('2024-09-30'))
+    train_end_date = st.date_input('Training End Date', value=pd.to_datetime('2024-03-31'))
     
-    # Preprocess data
-    df = preprocess_data(df)
-    
-    # Add features
-    df = add_features(df)
-    
-    # Limit training data to March 31st, 2024
-    train_df = df[df['Date'] <= train_end_date]
-    
-    # Train models
-    models = train_models(train_df)
-    
-    # Plot results
-    plot_results(train_df, models)
-    
-    # Plot residuals
-    plot_residuals(models)
-    
-    # Process each ticker for forecasting and plotting
-    for ticker, company_name in tickers.items():
-        print(f'Processing {ticker}...')
-        
-        # Fetch data
-        df = fetch_stock_data(ticker, start_date, end_date)
-        
-        # Preprocess data
+    if st.button('Run'):
+        train_end_date = pd.to_datetime(train_end_date)
+        first_ticker = tickers[0]
+        st.write(f'Processing {first_ticker}...')
+        df = fetch_stock_data(first_ticker, start_date, end_date)
         df = preprocess_data(df)
-        
-        # Add features
         df = add_features(df)
-        
-        # Limit training data to March 31st, 2024
         train_df = df[df['Date'] <= train_end_date]
-        
-        # Train models
         models = train_models(train_df)
         
-        # Forecast future prices using the best model (e.g., GradientBoostingRegressor)
-        best_model = models['GradientBoostingRegressor']['model']
-        future_df = forecast_prices(df, best_model, start_date='2024-04-01', end_date='2024-09-30')
+        # display MSE and R² values for each model
+        st.write("Model Performance on Training Data:")
+        for name, result in models.items():
+            st.write(f"{name} - MSE: {result['mse']}, R²: {result['r2']}")
+        plot_results(train_df, models)
+        plot_residuals(models)
         
-        # Plot forecasted prices with actual prices
-        plot_forecast(df, future_df, company_name)
+        # Process each ticker for forecasting and plotting
+        for ticker in tickers:
+            st.write(f'Processing {ticker}...')
+            df = fetch_stock_data(ticker, start_date, end_date)
+            df = preprocess_data(df)
+            df = add_features(df)
+            train_df = df[df['Date'] <= train_end_date]
+            models = train_models(train_df)
+            
+            # display MSE and R² values for each model
+            st.write(f"Model Performance for {ticker}:")
+            for name, result in models.items():
+                st.write(f"{name} - MSE: {result['mse']}, R²: {result['r2']}")
+            
+            # forecast future prices using the best model for each ticker
+            best_model = models['GradientBoostingRegressor']['model']
+            future_df = forecast_prices(df, best_model, start_date=train_end_date + pd.Timedelta(days=1), end_date=end_date)
+            
+            # plot forecasted w actual pricing
+            plot_forecast(df, future_df, ticker)
 
 if __name__ == '__main__':
     main()

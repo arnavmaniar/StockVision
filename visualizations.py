@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import streamlit as st
 
-# Plot results
 def plot_results(df: pd.DataFrame, models: dict):
     plt.figure(figsize=(14, 7))
     plt.plot(df['Date'], df['Close'], label='Actual Prices', color='black')
@@ -16,9 +16,8 @@ def plot_results(df: pd.DataFrame, models: dict):
     plt.ylabel('Stock Price')
     plt.title('Stock Price Predictions')
     plt.legend()
-    plt.show()
+    st.pyplot(plt)
 
-# Plot residuals
 def plot_residuals(models: dict):
     plt.figure(figsize=(14, 7))
     
@@ -30,9 +29,9 @@ def plot_residuals(models: dict):
     plt.ylabel('Frequency')
     plt.title('Residuals Distribution')
     plt.legend()
-    plt.show()
+    st.pyplot(plt)
 
-# Plot forecasted prices with actual prices
+# plot forecase against actual
 def plot_forecast(df: pd.DataFrame, future_df: pd.DataFrame, company_name: str):
     plt.figure(figsize=(14, 7))
     plt.plot(df[df['Date'] >= '2024-04-01']['Date'], df[df['Date'] >= '2024-04-01']['Close'], label='Actual Prices', color='black')
@@ -41,4 +40,4 @@ def plot_forecast(df: pd.DataFrame, future_df: pd.DataFrame, company_name: str):
     plt.ylabel('Stock Price')
     plt.title(f'Stock Price Forecast for {company_name} (April 1st to September 30th, 2024)')
     plt.legend()
-    plt.show()
+    st.pyplot(plt)

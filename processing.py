@@ -5,12 +5,10 @@ from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
-# Fetch stock data
 def fetch_stock_data(ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
     stock_data = yf.download(ticker, start=start_date, end=end_date)
     return stock_data
 
-# Preprocess data
 def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna()
     df['Date'] = df.index
@@ -20,7 +18,6 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df['Day'] = df['Date'].dt.day
     return df
 
-# Feature engineering
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
     df['DayOfWeek'] = df['Date'].dt.dayofweek
     df['IsMonthStart'] = df['Date'].dt.is_month_start.astype(int)
@@ -31,7 +28,7 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna()
     return df
 
-# Train models
+# model training init
 def train_models(df: pd.DataFrame):
     X = df[['Year', 'Month', 'Day', 'DayOfWeek', 'IsMonthStart', 'IsMonthEnd', 'Lag1', 'Lag2', 'Lag3']]
     y = df['Close']
@@ -58,7 +55,6 @@ def train_models(df: pd.DataFrame):
         
     return results
 
-# Forecast future prices
 def forecast_prices(df: pd.DataFrame, model, start_date: str, end_date: str):
     future_dates = pd.date_range(start=start_date, end=end_date)
     future_df = pd.DataFrame({'Date': future_dates})
