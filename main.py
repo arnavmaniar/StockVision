@@ -23,12 +23,15 @@ def main():
     train_end_date = st.date_input('Training End Date', value=pd.to_datetime('2024-03-31'))
     
     if st.button('Run'):
+        start_date = pd.to_datetime(start_date)
+        end_date = pd.to_datetime(end_date)
         train_end_date = pd.to_datetime(train_end_date)
         first_ticker = tickers[0]
         st.write(f'Processing {first_ticker}...')
         df = fetch_stock_data(first_ticker, start_date, end_date)
         df = preprocess_data(df)
         df = add_features(df)
+        df['Date'] = pd.to_datetime(df['Date'])
         train_df = df[df['Date'] <= train_end_date]
         models = train_models(train_df)
         
@@ -39,12 +42,13 @@ def main():
         plot_results(train_df, models)
         plot_residuals(models)
         
-        # Process each ticker for forecasting and plotting
+        # process each ticker for forecasting and plotting
         for ticker in tickers:
             st.write(f'Processing {ticker}...')
             df = fetch_stock_data(ticker, start_date, end_date)
             df = preprocess_data(df)
             df = add_features(df)
+            df['Date'] = pd.to_datetime(df['Date'])
             train_df = df[df['Date'] <= train_end_date]
             models = train_models(train_df)
             
@@ -53,11 +57,11 @@ def main():
             for name, result in models.items():
                 st.write(f"{name} - MSE: {result['mse']}, R²: {result['r2']}")
             
-            # forecast future prices using the best model for each ticker
+            # forecast future using the best model
             best_model = models['GradientBoostingRegressor']['model']
             future_df = forecast_prices(df, best_model, start_date=train_end_date + pd.Timedelta(days=1), end_date=end_date)
             
-            # plot forecasted w actual pricing
+            # plot forecasted w actual prices
             plot_forecast(df, future_df, ticker)
 
 if __name__ == '__main__':
