@@ -23,17 +23,31 @@ def main():
     train_end_date = st.date_input('Training End Date', value=pd.to_datetime('2024-03-31'))
     
     if st.button('Run'):
-        start_date = pd.to_datetime(start_date)
-        end_date = pd.to_datetime(end_date)
-        train_end_date = pd.to_datetime(train_end_date)
+        start_date = pd.to_datetime(start_date).tz_localize(None)
+        end_date = pd.to_datetime(end_date).tz_localize(None)
+        train_end_date = pd.to_datetime(train_end_date).tz_localize(None)
         first_ticker = tickers[0]
         st.write(f'Processing {first_ticker}...')
         df = fetch_stock_data(first_ticker, start_date, end_date)
         df = preprocess_data(df)
         df = add_features(df)
-        df['Date'] = pd.to_datetime(df['Date'])
+        df['Date'] = pd.to_datetime(df['Date']).tz_localize(None)
         train_df = df[df['Date'] <= train_end_date]
         models = train_models(train_df)
+        st.write("Model Performance on Training Data:")
+        for name, result in models.items():
+            st.write(f"{name} - MSE: {result['mse']}, R²: {result['r2']}")
+        plot_results(train_df, models)
+        plot_residuals(models)
+        
+        for ticker in tickers:
+            st.write(f'Processing {ticker}...')
+            df = fetch_stock_data(ticker, start_date, end_date)
+            df = preprocess_data(df)
+            df = add_features(df)
+            df['Date'] = pd.to_datetime(df['Date']).tz_localize(None)
+            train_df = df[df['Date'] <= train_end_date]
+            models = train_models(train_df)
         
         # display MSE and R² values for each model
         st.write("Model Performance on Training Data:")
