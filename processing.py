@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, r2_score
+import ta  # Technical Analysis library
 
 def fetch_stock_data(ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
     stock_data = yf.download(ticker, start=start_date, end=end_date)
@@ -25,12 +26,27 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     df['Lag1'] = df['Close'].shift(1)
     df['Lag2'] = df['Close'].shift(2)
     df['Lag3'] = df['Close'].shift(3)
+    
+    # Adding technical indicators
+    df['SMA_20'] = ta.trend.sma_indicator(df['Close'], window=20)
+    df['SMA_50'] = ta.trend.sma_indicator(df['Close'], window=50)
+    df['RSI'] = ta.momentum.rsi(df['Close'], window=14)
+    df['MACD'] = ta.trend.macd(df['Close'])
+    df['Bollinger_High'] = ta.volatility.bollinger_hband(df['Close'])
+    df['Bollinger_Low'] = ta.volatility.bollinger_lband(df['Close'])
+    
+    # Adding volume features
+    df['Volume_Change'] = df['Volume'].pct_change()
+    df['Avg_Volume_20'] = df['Volume'].rolling(window=20).mean()
+    
     df = df.dropna()
     return df
 
 # model training init
 def train_models(df: pd.DataFrame):
-    X = df[['Year', 'Month', 'Day', 'DayOfWeek', 'IsMonthStart', 'IsMonthEnd', 'Lag1', 'Lag2', 'Lag3']]
+    features = ['Year', 'Month', 'Day', 'DayOfWeek', 'IsMonthStart', 'IsMonthEnd', 'Lag1', 'Lag2', 'Lag3', 
+                'SMA_20', 'SMA_50', 'RSI', 'MACD', 'Bollinger_High', 'Bollinger_Low', 'Volume_Change', 'Avg_Volume_20']
+    X = df[features]
     y = df['Close']
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -39,20 +55,21 @@ def train_models(df: pd.DataFrame):
         'LinearRegression': LinearRegression(),
         'Ridge': Ridge(),
         'Lasso': Lasso(),
-        'RandomForestRegressor': RandomForestRegressor(n_estimators=100, random_state=42),
-        'GradientBoostingRegressor': GradientBoostingRegressor(n_estimators=100, random_state=42)
+        'RandomForestRegressor': RandomForestRegressor(),
+        'GradientBoostingRegressor': GradientBoostingRegressor()
     }
     
     results = {}
-    
     for name, model in models.items():
         model.fit(X_train, y_train)
         predictions = model.predict(X_test)
-        mse = mean_squared_error(y_test, predictions)
-        r2 = r2_score(y_test, predictions)
-        results[name] = {'model': model, 'mse': mse, 'r2': r2, 'predictions': predictions, 'y_test': y_test}
-        print(f'{name} - MSE: {mse}, R2: {r2}')
-        
+        results[name] = {
+            'model': model,
+            'mse': mean_squared_error(y_test, predictions),
+            'r2': r2_score(y_test, predictions),
+            'predictions': predictions,
+            'y_test': y_test
+        }
     return results
 
 def forecast_prices(df: pd.DataFrame, model, start_date: str, end_date: str):
@@ -75,7 +92,17 @@ def forecast_prices(df: pd.DataFrame, model, start_date: str, end_date: str):
         future_df.loc[i, 'Lag1'] = lag1
         future_df.loc[i, 'Lag2'] = lag2
         future_df.loc[i, 'Lag3'] = lag3
-        forecast = model.predict(future_df[['Year', 'Month', 'Day', 'DayOfWeek', 'IsMonthStart', 'IsMonthEnd', 'Lag1', 'Lag2', 'Lag3']].iloc[i:i+1])[0]
+        future_df.loc[i, 'SMA_20'] = ta.trend.sma_indicator(df['Close'], window=20).iloc[-1]
+        future_df.loc[i, 'SMA_50'] = ta.trend.sma_indicator(df['Close'], window=50).iloc[-1]
+        future_df.loc[i, 'RSI'] = ta.momentum.rsi(df['Close'], window=14).iloc[-1]
+        future_df.loc[i, 'MACD'] = ta.trend.macd(df['Close']).iloc[-1]
+        future_df.loc[i, 'Bollinger_High'] = ta.volatility.bollinger_hband(df['Close']).iloc[-1]
+        future_df.loc[i, 'Bollinger_Low'] = ta.volatility.bollinger_lband(df['Close']).iloc[-1]
+        future_df.loc[i, 'Volume_Change'] = df['Volume'].pct_change().iloc[-1]
+        future_df.loc[i, 'Avg_Volume_20'] = df['Volume'].rolling(window=20).mean().iloc[-1]
+        
+        forecast = model.predict(future_df[['Year', 'Month', 'Day', 'DayOfWeek', 'IsMonthStart', 'IsMonthEnd', 'Lag1', 'Lag2', 'Lag3', 
+                                            'SMA_20', 'SMA_50', 'RSI', 'MACD', 'Bollinger_High', 'Bollinger_Low', 'Volume_Change', 'Avg_Volume_20']].iloc[i:i+1])[0]
         future_prices.append(forecast)
         lag3 = lag2
         lag2 = lag1

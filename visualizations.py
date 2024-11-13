@@ -7,9 +7,12 @@ def plot_results(df: pd.DataFrame, models: dict):
     plt.figure(figsize=(14, 7))
     plt.plot(df['Date'], df['Close'], label='Actual Prices', color='black')
     
+    features = ['Year', 'Month', 'Day', 'DayOfWeek', 'IsMonthStart', 'IsMonthEnd', 'Lag1', 'Lag2', 'Lag3', 
+                'SMA_20', 'SMA_50', 'RSI', 'MACD', 'Bollinger_High', 'Bollinger_Low', 'Volume_Change', 'Avg_Volume_20']
+    
     for name, model_info in models.items():
         model = model_info['model']
-        predictions = model.predict(df[['Year', 'Month', 'Day', 'DayOfWeek', 'IsMonthStart', 'IsMonthEnd', 'Lag1', 'Lag2', 'Lag3']])
+        predictions = model.predict(df[features])
         plt.plot(df['Date'], predictions, label=f'{name} Predictions')
     
     plt.xlabel('Date')
@@ -31,7 +34,6 @@ def plot_residuals(models: dict):
     plt.legend()
     st.pyplot(plt)
 
-# plot forecase against actual
 def plot_forecast(df: pd.DataFrame, future_df: pd.DataFrame, company_name: str):
     plt.figure(figsize=(14, 7))
     plt.plot(df[df['Date'] >= '2024-04-01']['Date'], df[df['Date'] >= '2024-04-01']['Close'], label='Actual Prices', color='black')
